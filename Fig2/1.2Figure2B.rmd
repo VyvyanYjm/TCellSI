@@ -1,0 +1,104 @@
+load("Figure2_B_A.rda")
+
+###################  输入变量为  summarydata_sc1 ，加载Figure2_B_A.rda 后直接运行ggplot生成 Figure2B
+sname <- c("Quiescence", "Helper", "Proliferation", "Regulating", "Cytotoxicity", "Senescence", "Progenitor_exhaustion", "Terminal_exhaustion")
+summarydata_sc <- summarydata_sc %>%
+  as.data.frame() %>%
+  dplyr::select(-4)
+summarydata_sc$predict_type <- factor(summarydata_sc$predict_type, levels = sname)
+summarydata_sc$Celltype_minor %>% unique()
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD4Teff")] <- "CD4 Teff"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD8 TEM")] <- "CD8 Tem"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD8 TEMRA")] <- "CD8 Temra"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD8Tcm")] <- "CD8 Tcm"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD8Teff")] <- "CD8 Teff"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD4Tn")] <- "CD4 Tn"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD8Tn")] <- "CD8 Tn"
+summarydata_sc$Celltype_minor[which(summarydata_sc$Celltype_minor == "CD4 TEMRA")] <- "CD4 Temra"
+
+summarydata_sc1 <- summarydata_sc %>%
+  group_by(summarydata_sc$Celltype_minor) %>%
+  mutate(text_y = cumsum(count) / all * 100 - 3)
+
+df <- summarydata_sc1 %>% as.data.frame()
+names(df)[1] <- "Germline_Variant"
+names(df)[2] <- "Gene"
+names(df)[5] <- "Percentage1"
+
+# 先绘制堆叠柱状图：
+p <- ggplot(df) +
+  geom_col(
+    aes(
+      x = 3, # 给一个数值向量作为柱子x轴的中心坐标
+      y = Percentage1,
+      fill = Germline_Variant
+    ), # 将颜色映射到Germline Variant
+    width = 1.5, # 柱形图柱子宽度设置
+    color = "white"
+  ) # 描边颜色
+p
+# 按Gene列进行分面：
+p <- p + facet_grid(. ~ Gene)
+p
+# 将柱状图转换为饼状图：
+## 即将当前的直角坐标系转换为极坐标系；
+p1 <- p + coord_polar(theta = "y")
+p1
+# 将饼状图转化为甜甜圈图：
+p2 <- p1 + xlim(c(1, 3.8)) # 通过限制x轴调整甜甜圈的粗细
+p2
+# 自定义配色：
+
+library(cols4all)
+c4a_gui()
+mycol <- c4a("pastel", 8)
+mycol2 <- c4a("superfishel_stone", 8)
+
+mycol <- paletteer_d("ggthemes::Tableau_10")
+p3 <- p2 + scale_fill_manual(values = mycol)
+p3
+
+# 图表细节调整美化：
+p4 <- p3 +
+  theme_void() + # 空白主题
+  theme(
+    legend.position = "bottom", # 图例位置调整
+    strip.text.x = element_text(size = 14), # 分面标签大小
+    legend.title = element_text(size = 15), # 图例标题大小调整
+    legend.text = element_text(size = 14) # 图例标签大小调整
+  )
+p4
+
+pdf(file = "Figure2B.pdf", width = 30, height = 6)
+p4
+dev.off()
+
+
+
+# 运行如下代码生成 Figure2A
+# library(fmsb)
+# pdf(file = "radar_12.pdf", width = 12, height = 9, bg = "#FFFFFF")
+# op <- par(mar = c(1, 1, 2, 1), bg = "#FFFFFF") # 设置画布的边界和背景色参数
+# par(mfrow = c(3, 4)) # 设置图形的排列方式，例如3行2列
+# for (i in 1:12) {
+#   score_scdf2 <- score_scdf1[which(score_scdf1$Celltype_minor == names(table(score_scdf1$Celltype_minor))[i]), -1]
+#   score_scdf3 <- as.data.frame(matrix(nrow = 2, ncol = 8))
+#   score_scdf3[1, ] <- rep(1, 8)
+#   score_scdf3[2, ] <- rep(0, 8)
+#   colnames(score_scdf3) <- colnames(score_scdf2)
+#   score_scdf2 <- rbind(score_scdf3, score_scdf2)
+#   radarchart(
+#     score_scdf2,
+#     axistype = 0, title = titles[i],
+#     pcol = colors[i],
+#     pfcol = scales::alpha(colors[i], 0.05),
+#     plwd = 2, plty = 1,
+#     vlabels = c(
+#       "Quies", "Term", "Prog", "Senes",
+#       "Cyto", "Regu", "Proli", "Helper"
+#     ), palcex = 3,
+#     cglcol = colors[i], cglty = 1, cglwd = 1, vlcex = 1.3
+#   )
+# }
+# par(op)
+# dev.off()

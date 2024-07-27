@@ -1,0 +1,61 @@
+load("Figure2_B_A.rda")
+
+###################  运行如下代码生成 Figure2A
+
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD4Teff")] <- "CD4 Teff"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD8 TEM")] <- "CD8 Tem"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD8 TEMRA")] <- "CD8 Temra"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD8Tcm")] <- "CD8 Tcm"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD8Teff")] <- "CD8 Teff"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD4Tn")] <- "CD4 Tn"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD8Tn")] <- "CD8 Tn"
+score_scdf1$Celltype_minor[which(score_scdf1$Celltype_minor == "CD4 TEMRA")] <- "CD4 Temra"
+
+sel <- unique(score_scdf1$Celltype_minor) %>% str_sort()
+
+FUN <- function(i) {
+  score_scdf2 <- score_scdf1[which(score_scdf1$Celltype_minor == i), -1]
+  sname <- c("Quiescence", "Helper", "Proliferation", "Regulating", "Cytotoxicity", "Senescence", "Progenitor_exhaustion", "Terminal_exhaustion")
+  score_scdf2 <- score_scdf2[, sname]
+  dat <- score_scdf2 %>%
+    colMeans() %>%
+    as.data.frame() %>%
+    rownames_to_column("x")
+  names(dat)[2] <- "y"
+  dat$proj <- i
+  return(dat)
+}
+l <- lapply(sel, FUN)
+dat <- do.call(rbind, l)
+
+min_break <- 0
+max_break <- 1
+mid_break <- mean(c(min_break, max_break))
+
+dat$x %>% str_sub(1, 4)
+
+source("mytheme.R")
+p <- ggplot(dat) +
+  geom_hline(
+    dat = data.frame(y = c(min_break, mid_break, max_break)),
+    aes(yintercept = y), color = "lightgrey"
+  ) +
+  geom_col(aes(x = x, y = y, fill = y),
+    position = "dodge2", show.legend = TRUE, alpha = 1, width = 0.6, colour = "black", lwd = 0.8
+  ) +
+  geom_segment(aes(x = x, y = min_break, xend = reorder(x, y), yend = max_break),
+    linetype = "dashed", color = "gray12"
+  ) +
+  facet_grid(. ~ proj) +
+  scale_y_continuous(breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1), labels = c("0.0", "0.2", "0.4", "0.6", "0.8", "1.0")) +
+  coord_polar() +
+  labs(x = NULL, y = NULL) +
+  theme_blue +
+  scale_fill_gradientn("TCSS", colours = c("#0d3b66", "#faf0ca", "#f4d35e", "#ee964b", "#f95738")) +
+  guides(fill = guide_colorsteps(barwidth = 15, barheight = .5, title.position = "top", title.hjust = .5, show.limits = F)) +
+  theme(legend.position = "bottom")
+p
+pdf(file = "Figure2A.pdf", width = 30, height = 6)
+p
+dev.off()
+
